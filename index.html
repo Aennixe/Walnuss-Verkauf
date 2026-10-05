@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Walnuss">
+<meta name="theme-color" content="#6b4f2a">
+<title>Walnuss-Verkauf</title>
+<style>
+:root{--brown:#6b4f2a;--green:#3f6b3f;--bg:#f5f2ec;--card:#fff;--text:#25231f;--muted:#777;--danger:#a33;--border:#e3ded5}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);padding-bottom:78px}
+header{background:var(--brown);color:#fff;padding:18px 18px calc(18px + env(safe-area-inset-top));position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:22px}header small{opacity:.85}
+main{max-width:760px;margin:auto;padding:14px}
+.view{display:none}.view.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:15px}.stat b{display:block;font-size:25px;margin-top:5px}.stat span{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:15px;margin:12px 0}.card h2{font-size:17px;margin:0 0 12px}
+button,.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:650;background:var(--brown);color:white;font-size:15px;cursor:pointer}
+button.secondary{background:#eee8df;color:var(--text)}button.green{background:var(--green)}button.danger{background:#9e3838}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:11px;background:#fff;font-size:16px}textarea{min-height:75px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.order{border-top:1px solid var(--border);padding:12px 0}.order:first-child{border-top:0}.order strong{font-size:16px}.pill{display:inline-block;border-radius:20px;padding:4px 8px;background:#eee8df;font-size:12px;margin-left:6px}.pill.open{background:#fff1c9}.pill.done{background:#dff1df}.pill.cancel{background:#f7dddd}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);padding:7px 6px calc(7px + env(safe-area-inset-bottom));z-index:10}.bottom button{background:transparent;color:#555;padding:7px 3px;font-size:12px}.bottom button.active{color:var(--brown);font-weight:800}
+.muted{color:var(--muted)}.right{float:right}.empty{text-align:center;padding:30px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><h1>🌰 Walnuss-Verkauf</h1><small>Privat · lokal auf diesem Gerät</small></header>
+<main>
+<section id="dashboard" class="view active">
+  <div class="grid">
+    <div class="stat"><span>Gesamtbestand</span><b id="totalStock">0 kg</b></div>
+    <div class="stat"><span>Reserviert</span><b id="reservedStock">0 kg</b></div>
+    <div class="stat"><span>Verfügbar</span><b id="freeStock">0 kg</b></div>
+    <div class="stat"><span>Offene Bestellungen</span><b id="openCount">0</b></div>
+  </div>
+  <div class="card">
+    <h2>Nächste Termine</h2><div id="upcoming"></div>
+  </div>
+  <div class="actions"><button onclick="show('orders');openOrderForm()">＋ Bestellung</button><button class="secondary" onclick="show('stock')">Bestand verwalten</button></div>
+</section>
+
+<section id="orders" class="view">
+  <div class="card">
+    <h2>Neue Bestellung</h2>
+    <div class="row"><div><label>Name *</label><input id="name"></div><div><label>Kontakt</label><input id="contact" type="tel"></div></div>
+    <div class="row"><div><label>Menge (kg) *</label><input id="qty" type="number" min="0.01" step="0.01"></div><div><label>Preis / kg (€) *</label><input id="price" type="number" min="0" step="0.01"></div></div>
+    <div class="row"><div><label>Art</label><select id="type"><option>Abholung</option><option>Lieferung</option></select></div><div><label>Termin</label><input id="date" type="datetime-local"></div></div>
+    <label>Notiz</label><textarea id="note" placeholder="z. B. geschält, Verpackung ..."></textarea>
+    <div class="actions" style="margin-top:10px"><button onclick="saveOrder()">Bestellung speichern</button><button class="secondary" onclick="clearForm()">Zurücksetzen</button></div>
+  </div>
+  <div class="card"><h2>Bestellungen</h2><div id="ordersList"></div></div>
+</section>
+
+<section id="stock" class="view">
+  <div class="card">
+    <h2>Bestand</h2>
+    <div class="grid">
+      <div class="stat"><span>Gesamt</span><b id="sTotal">0 kg</b></div>
+      <div class="stat"><span>Reserviert</span><b id="sReserved">0 kg</b></div>
+      <div class="stat"><span>Verfügbar</span><b id="sFree">0 kg</b></div>
+    </div>
+    <label>Bestand hinzufügen / abziehen (kg)</label><input id="stockChange" type="number" step="0.01" placeholder="z. B. 25 oder -5">
+    <div class="actions" style="margin-top:8px"><button class="green" onclick="changeStock()">Bestand ändern</button></div>
+  </div>
+  <div class="card">
+    <h2>Preis</h2>
+    <label>Standardpreis / kg (€)</label><input id="defaultPrice" type="number" min="0" step="0.01" onchange="saveSettings()">
+  </div>
+</section>
+
+<section id="settings" class="view">
+  <div class="card"><h2>Daten</h2><p class="muted">Alle Daten werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
+    <div class="actions">
+      <button onclick="exportData()">Backup exportieren</button>
+      <button class="secondary" onclick="document.getElementById('importFile').click()">Backup importieren</button>
+      <input id="importFile" type="file" accept=".json" hidden onchange="importData(event)">
+    </div>
+  </div>
+  <div class="card"><h2>Gefahrenbereich</h2><button class="danger" onclick="resetAll()">Alle Daten löschen</button></div>
+</section>
+</main>
+
+<nav class="bottom">
+<button data-view="dashboard" onclick="show('dashboard')">🏠<br>Start</button>
+<button data-view="orders" onclick="show('orders')">📦<br>Bestellungen</button>
+<button data-view="stock" onclick="show('stock')">🌰<br>Bestand</button>
+<button data-view="settings" onclick="show('settings')">⚙️<br>Einstellungen</button>
+</nav>
+
+<script>
+const KEY='walnussAppV1';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{stock:0,price:10,orders:[]};
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render();}
+function euro(n){return Number(n||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});}
+function kg(n){return Number(n||0).toLocaleString('de-DE',{maximumFractionDigits:2})+' kg';}
+function reserved(){return db.orders.filter(o=>o.status==='Offen').reduce((s,o)=>s+Number(o.qty),0)}
+function show(id){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.bottom button').forEach(x=>x.classList.toggle('active',x.dataset.view===id));render();}
+function openOrderForm(){clearForm();document.getElementById('price').value=db.price||'';document.getElementById('date').value=new Date(Date.now()+86400000).toISOString().slice(0,16);}
+function clearForm(){['name','contact','qty','price','date','note'].forEach(id=>document.getElementById(id).value='');document.getElementById('type').value='Abholung';}
+function saveOrder(){
+ const name=document.getElementById('name').value.trim(), qty=+document.getElementById('qty').value, price=+document.getElementById('price').value;
+ if(!name||qty<=0||price<0)return alert('Bitte Name, Menge und Preis korrekt ausfüllen.');
+ if(qty>db.stock-reserved())return alert('Nicht genügend verfügbarer Bestand. Verfügbar: '+kg(db.stock-reserved()));
+ db.orders.push({id:Date.now(),name,contact:document.getElementById('contact').value,qty,price,type:document.getElementById('type').value,date:document.getElementById('date').value,note:document.getElementById('note').value,status:'Offen'});
+ save();clearForm();alert('Bestellung gespeichert.');
+}
+function setStatus(id,status){const o=db.orders.find(x=>x.id===id);if(o){o.status=status;save();}}
+function deleteOrder(id){if(confirm('Bestellung wirklich löschen?')){db.orders=db.orders.filter(x=>x.id!==id);save();}}
+function changeStock(){const v=+document.getElementById('stockChange').value;if(!v)return; if(db.stock+v<reserved())return alert('Der Bestand darf nicht unter die reservierten Mengen fallen ('+kg(reserved())+').');db.stock+=v;document.getElementById('stockChange').value='';save();}
+function saveSettings(){db.price=+document.getElementById('defaultPrice').value||0;save();}
+function render(){
+ const r=reserved(), free=db.stock-r;
+ ['totalStock','sTotal'].forEach(id=>document.getElementById(id).textContent=kg(db.stock));
+ ['reservedStock','sReserved'].forEach(id=>document.getElementById(id).textContent=kg(r));
+ ['freeStock','sFree'].forEach(id=>document.getElementById(id).textContent=kg(free));
+ document.getElementById('openCount').textContent=db.orders.filter(o=>o.status==='Offen').length;
+ document.getElementById('defaultPrice').value=db.price;
+ const upcoming=db.orders.filter(o=>o.status==='Offen').sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(0,5);
+ document.getElementById('upcoming').innerHTML=upcoming.length?upcoming.map(card).join(''):'<div class="empty">Keine offenen Termine.</div>';
+ const list=[...db.orders].sort((a,b)=>b.id-a.id);
+ document.getElementById('ordersList').innerHTML=list.length?list.map(card).join(''):'<div class="empty">Noch keine Bestellungen.</div>';
+}
+function card(o){
+ const d=o.date?new Date(o.date).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}):'Kein Termin';
+ const cls=o.status==='Offen'?'open':o.status==='Storniert'?'cancel':'done';
+ return `<div class="order"><strong>${esc(o.name)}</strong><span class="pill ${cls}">${o.status}</span><span class="right">${kg(o.qty)}</span>
+ <div class="muted">${d} · ${o.type} · ${euro(o.qty*o.price)} (${euro(o.price)}/kg)</div>
+ ${o.contact?`<div>📞 ${esc(o.contact)}</div>`:''}${o.note?`<div class="muted">📝 ${esc(o.note)}</div>`:''}
+ <div class="actions" style="margin-top:8px">${o.status==='Offen'?`<button class="green" onclick="setStatus(${o.id},'Erledigt')">Erledigt</button><button class="secondary" onclick="setStatus(${o.id},'Storniert')">Stornieren</button>`:''}<button class="secondary" onclick="deleteOrder(${o.id})">Löschen</button></div></div>`;
+}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='walnuss-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!x||!Array.isArray(x.orders))throw 0;db={stock:+x.stock||0,price:+x.price||0,orders:x.orders};save();alert('Backup importiert.')}catch{alert('Ungültige Backup-Datei.')}};r.readAsText(f);}
+function resetAll(){if(confirm('Wirklich ALLE Daten löschen?')){db={stock:0,price:10,orders:[]};save();}}
+show('dashboard');
+</script>
+</body>
+</html>
